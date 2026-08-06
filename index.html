@@ -1169,6 +1169,15 @@ document.querySelectorAll('[data-icon]').forEach(im=>{
 let PX=innerWidth/2, PY=innerHeight/2;
 addEventListener('mousemove',e=>{PX=e.clientX;PY=e.clientY});
 
+/* ═══ مجمّع سكرول واحد — بدل ما كل دالة تشتغل على كل حركة سكرول خام،
+   كلهم بيتسجلوا هنا وبيتنفذوا مرة واحدة بس لكل فريم ═══ */
+const scrollFns=[];
+let scrollRAF=null;
+addEventListener('scroll',()=>{
+  if(scrollRAF)return;
+  scrollRAF=requestAnimationFrame(()=>{scrollRAF=null;for(const fn of scrollFns)fn()});
+},{passive:true});
+
 /* ═══ AMBIENT GRID ═══ */
 const am=document.getElementById('ambient'), actx=am.getContext('2d');
 let aw=0,ah=0,ADPR=Math.min(devicePixelRatio||1,2),pts=[];
@@ -1490,18 +1499,28 @@ function onScroll(){
   heroInner.style.opacity=1-p*1.35;
   heroInner.style.transform=`translateY(${p*-70}px) scale(${1-p*.08})`;
   nav.classList.toggle('stuck',scrollY>60);
-  const max=document.body.scrollHeight-innerHeight;
-  prog.style.width=(scrollY/max*100)+'%';
-  if(innerWidth>900){
+  prog.style.width=(scrollY/docMax*100)+'%';
+  if(innerWidth>900 && hsTotal>0){
     const r=hs.getBoundingClientRect();
-    const total=hs.offsetHeight-innerHeight;
-    const t=Math.max(0,Math.min(1,(-r.top)/total));
-    const dist=Math.max(0,htrack.scrollWidth-innerWidth+96);
-    htrack.style.transform=`translateX(${-t*dist}px)`;
+    const t=Math.max(0,Math.min(1,(-r.top)/hsTotal));
+    htrack.style.transform=`translateX(${-t*htrackDist}px)`;
     hbarFill.style.width=(t*100)+'%';
   }
 }
-addEventListener('scroll',onScroll,{passive:true});
+/* قيم تتحسب مرة واحدة بس، مش كل فريم — قراية ارتفاع الصفحة كلها حاجة تقيلة جداً */
+let docMax=1, hsTotal=0, htrackDist=0;
+function measurePage(){
+  docMax=Math.max(1, document.body.scrollHeight-innerHeight);
+  hsTotal=Math.max(0, hs.offsetHeight-innerHeight);
+  htrackDist=Math.max(0, htrack.scrollWidth-innerWidth+96);
+}
+measurePage();
+addEventListener('resize',measurePage);
+addEventListener('load',measurePage);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(measurePage);
+setTimeout(measurePage,1200);
+setTimeout(measurePage,3000);
+scrollFns.push(onScroll);
 onScroll();
 
 /* ═══════ MANIFESTO — الكلمات بتولّع مع السكرول ═══════ */
@@ -1526,8 +1545,8 @@ onScroll();
     const n=Math.floor(p*ws.length*1.12);
     ws.forEach((w,i)=>w.classList.toggle('lit',i<n));
   }
-  addEventListener('scroll',paint,{passive:true});
   addEventListener('resize',paint);
+  scrollFns.push(paint);
   paint();
 })();
 
@@ -1719,8 +1738,8 @@ onScroll();
     });
     moveTo(best);
   }
-  addEventListener('scroll',syncActive,{passive:true});
   addEventListener('resize',syncActive);
+  scrollFns.push(syncActive);
   setTimeout(syncActive,600);
 })();
 
