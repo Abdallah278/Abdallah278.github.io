@@ -1828,7 +1828,7 @@ function robot(){
   let   SCALE   = 0;             // 0 = يحسب لوحده. غيّرها لرقم لو عايز تتحكم
   let   Y_SHIFT = 0;             // + يرفعه / − ينزّله
   let   TURN    = 0;             // لفّة ثابتة بالدرجات لو الموديل مش مواجهك
-  const FRAME   = 0.66;   // نازل شوية عن النص عشان الراس متلزقش في الشريط اللي فوق
+  const FRAME   = 0.86;   // نازل تحت أكتر عشان الراس تاخد مسافة واضحة من الشريط اللي فوق
   /* ══════════════════════════════════════════ */
 
   const scene=new THREE.Scene();
@@ -1928,9 +1928,9 @@ function robot(){
     rnd.setSize(w,h,false);
     cam.aspect=w/h;
     const narrow=w<820;
-    cam.fov = narrow ? 40 : 30;
-    cam.position.set(0, narrow?-0.24:-0.1, narrow?10.2:8.4);
-    cam.lookAt(0,-0.1,0);
+    cam.fov = narrow ? 42 : 32;
+    cam.position.set(0, narrow?-0.3:-0.16, narrow?11.4:9.6);
+    cam.lookAt(0,-0.14,0);
     cam.updateProjectionMatrix();
   }
   addEventListener('resize',fit); fit();
