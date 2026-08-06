@@ -1183,6 +1183,7 @@ function amResize(){
 amResize();
 addEventListener('resize',amResize);
 function amDraw(){
+  if(!ambActive){requestAnimationFrame(amDraw);return}
   actx.clearRect(0,0,aw,ah);
   for(const p of pts){
     const dx=p.x-PX,dy=p.y-PY,d=Math.sqrt(dx*dx+dy*dy);
@@ -1194,6 +1195,9 @@ function amDraw(){
   }
   requestAnimationFrame(amDraw);
 }
+/* توقف تماماً لما تبعد عن الهيرو — مش محتاجينها في باقي الصفحة */
+let ambActive=true;
+addEventListener('scroll',()=>{ambActive=scrollY<innerHeight*1.5},{passive:true});
 if(!reduce) amDraw();
 
 /* ═══ SHATTER ═══ */
@@ -1730,8 +1734,10 @@ onScroll();
   function apply(){
     raf=null;
     if(!heroVisible)return;
-    chs.forEach(ch=>{
-      const r=ch.getBoundingClientRect();
+    /* نقرأ مواقع كل الحروف الأول، وبعدين نكتب الحركة — بدل ما نتنقل بينهم */
+    const reads=chs.map(ch=>ch.getBoundingClientRect());
+    chs.forEach((ch,i)=>{
+      const r=reads[i];
       const cx2=r.left+r.width/2, cy2=r.top+r.height/2;
       const dx=PX-cx2, dy=PY-cy2;
       const d=Math.hypot(dx,dy), R=190;
