@@ -648,7 +648,7 @@ h1.logo{font-size:clamp(44px,10.5vw,152px)}
 
 /* ═══════ UNIT — الروبوت + كروم ═══════ */
 .unit{
-  position:relative;z-index:2;height:100svh;overflow:hidden;
+  position:relative;z-index:2;height:100svh;overflow:hidden;padding-top:24px;
   background:
     radial-gradient(62% 50% at 50% 40%, #141824 0%, #090a10 52%, #040405 100%);
   display:grid;place-items:center;
@@ -1000,9 +1000,6 @@ footer{position:relative;z-index:2;background:var(--void);color:var(--ash);paddi
 </footer>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
 <script>
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -1816,8 +1813,10 @@ document.querySelectorAll('.zap').forEach(s=>zapIO.observe(s));
 
 /* ═══════════════════════════════════════════
    ROBOT — تحميل موديل robot.glb
+   Three.js نفسها بتتحمّل في الخلفية بعد ما باقي
+   الموقع يبقى شغال، عشان متعطلش أي حاجة تانية
    ═══════════════════════════════════════════ */
-(function robot(){
+function robot(){
   const cv=document.getElementById('bot');
   if(!cv||typeof THREE==='undefined'||!THREE.GLTFLoader)return;
 
@@ -1828,7 +1827,7 @@ document.querySelectorAll('.zap').forEach(s=>zapIO.observe(s));
   let   SCALE   = 0;             // 0 = يحسب لوحده. غيّرها لرقم لو عايز تتحكم
   let   Y_SHIFT = 0;             // + يرفعه / − ينزّله
   let   TURN    = 0;             // لفّة ثابتة بالدرجات لو الموديل مش مواجهك
-  const FRAME   = 0.50;   // 0.5 = متوسّط تماماً          // كام % من الموديل تبان (0.6 = النص العلوي)
+  const FRAME   = 0.66;   // نازل شوية عن النص عشان الراس متلزقش في الشريط اللي فوق
   /* ══════════════════════════════════════════ */
 
   const scene=new THREE.Scene();
@@ -1861,56 +1860,65 @@ document.querySelectorAll('.zap').forEach(s=>zapIO.observe(s));
   const envTex=pmrem.fromScene(envScene,0.04).texture;
   scene.environment=envTex;
 
-  /* ── تحميل الموديل ── */
-  let model=null, mixer=null;
+  /* ── تحميل الموديل — بس لما نقرب من القسم، مش من أول ما الصفحة تفتح ──
+     ده بيوفر باندويدث كبير على النت البطيء، خصوصاً لو الملف كبير ── */
   const loader=new THREE.GLTFLoader();
   if(THREE.DRACOLoader){
     const d=new THREE.DRACOLoader();
     d.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
     loader.setDRACOLoader(d);
   }
+  function loadModel(){
+    loader.load(MODEL, gltf=>{
+      model=gltf.scene;
 
-  loader.load(MODEL, gltf=>{
-    model=gltf.scene;
+      /* توسيط وتحجيم تلقائي */
+      const box=new THREE.Box3().setFromObject(model);
+      const size=box.getSize(new THREE.Vector3());
+      const ctr=box.getCenter(new THREE.Vector3());
+      const auto = SCALE>0 ? SCALE : 3.4/Math.max(size.y,0.001);
 
-    /* توسيط وتحجيم تلقائي */
-    const box=new THREE.Box3().setFromObject(model);
-    const size=box.getSize(new THREE.Vector3());
-    const ctr=box.getCenter(new THREE.Vector3());
-    const auto = SCALE>0 ? SCALE : 3.4/Math.max(size.y,0.001);
+      model.position.sub(ctr);
+      model.scale.setScalar(auto);
+      model.rotation.y = TURN*Math.PI/180;
 
-    model.position.sub(ctr);
-    model.scale.setScalar(auto);
-    model.rotation.y = TURN*Math.PI/180;
+      /* يظبط الخامات لو الموديل جاي بمواد باهتة */
+      model.traverse(o=>{
+        if(!o.isMesh)return;
+        o.frustumCulled=false;
+        const m=o.material;
+        if(m && m.isMeshStandardMaterial){
+          m.envMapIntensity=1.5;
+          if(m.roughness>0.75) m.roughness=0.35;
+          if(m.metalness<0.15) m.metalness=0.45;
+          m.needsUpdate=true;
+        }
+      });
 
-    /* يظبط الخامات لو الموديل جاي بمواد باهتة */
-    model.traverse(o=>{
-      if(!o.isMesh)return;
-      o.frustumCulled=false;
-      const m=o.material;
-      if(m && m.isMeshStandardMaterial){
-        m.envMapIntensity=1.5;
-        if(m.roughness>0.75) m.roughness=0.35;
-        if(m.metalness<0.15) m.metalness=0.45;
-        m.needsUpdate=true;
+      G.add(model);
+      G.position.y = size.y*auto*(0.5-FRAME) + Y_SHIFT;
+
+      /* لو الموديل جاي معاه أنيميشن، شغّل الأول */
+      if(gltf.animations && gltf.animations.length){
+        mixer=new THREE.AnimationMixer(model);
+        mixer.clipAction(gltf.animations[0]).play();
       }
+      fit();
+    },
+    undefined,
+    err=>{
+      console.warn('robot.glb مش لاقيه — تأكد إنه جنب index.html');
+      cv.style.display='none';
     });
-
-    G.add(model);
-    G.position.y = size.y*auto*(0.5-FRAME) + Y_SHIFT;
-
-    /* لو الموديل جاي معاه أنيميشن، شغّل الأول */
-    if(gltf.animations && gltf.animations.length){
-      mixer=new THREE.AnimationMixer(model);
-      mixer.clipAction(gltf.animations[0]).play();
+  }
+  let model=null, mixer=null, modelRequested=false;
+  new IntersectionObserver((es,ob)=>{
+    if(es[0].isIntersecting && !modelRequested){
+      modelRequested=true;
+      loadModel();
+      ob.disconnect();
     }
-    fit();
-  },
-  undefined,
-  err=>{
-    console.warn('robot.glb مش لاقيه — تأكد إنه جنب index.html');
-    cv.style.display='none';
-  });
+  },{rootMargin:'900px 0px'}).observe(document.getElementById('unit'));
 
   /* ── التأطير — هامش أمان أكبر على الموبايل عشان الراس متلزقش في حافة القسم ── */
   function fit(){
@@ -1919,9 +1927,9 @@ document.querySelectorAll('.zap').forEach(s=>zapIO.observe(s));
     rnd.setSize(w,h,false);
     cam.aspect=w/h;
     const narrow=w<820;
-    cam.fov = narrow ? 40 : 28;
-    cam.position.set(0, narrow?-0.18:0, narrow?8.6:6.6);
-    cam.lookAt(0,0,0);
+    cam.fov = narrow ? 40 : 30;
+    cam.position.set(0, narrow?-0.24:-0.1, narrow?10.2:8.4);
+    cam.lookAt(0,-0.1,0);
     cam.updateProjectionMatrix();
   }
   addEventListener('resize',fit); fit();
@@ -1947,7 +1955,37 @@ document.querySelectorAll('.zap').forEach(s=>zapIO.observe(s));
     rnd.render(scene,cam);
   }
   loop();
-})();
+}
+
+/* تحميل مكتبة Three.js في الخلفية — بعد ما باقي الموقع يبقى جاهز خالص،
+   عشان النت البطيء ميوقفش تشغيل الموقع من أول ثانية */
+function loadScriptSeq(urls, done){
+  let i=0;
+  (function next(){
+    if(i>=urls.length)return done();
+    const s=document.createElement('script');
+    s.src=urls[i++];
+    s.onload=next;
+    s.onerror=next;
+    document.body.appendChild(s);
+  })();
+}
+function startRobotWhenNear(){
+  const unitEl=document.getElementById('unit');
+  if(!unitEl)return;
+  let started=false;
+  new IntersectionObserver((es,ob)=>{
+    if(es[0].isIntersecting && !started){
+      started=true; ob.disconnect();
+      loadScriptSeq([
+        'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+        'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js',
+        'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js'
+      ], robot);
+    }
+  },{rootMargin:'1200px 0px'}).observe(unitEl);
+}
+startRobotWhenNear();
 
 /* ═══ REVEAL ═══ */
 const io=new IntersectionObserver(es=>{
