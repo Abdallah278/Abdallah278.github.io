@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no" class="notranslate">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google" content="notranslate">
 <title>Abdallah Mahmoud — Mechatronics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -722,7 +723,7 @@ footer{position:relative;z-index:2;background:var(--void);color:var(--ash);paddi
     <div class="shock s2" id="shock2"></div>
     <div id="introFlash"></div>
     <div class="intro-name">
-      <h2 id="introName" class="logo" data-l1="Abdallah" data-l2="Mahmoud"></h2>
+      <h2 id="introName" class="logo notranslate" translate="no" data-l1="Abdallah" data-l2="Mahmoud"></h2>
     </div>
     <div class="intro-count" id="introCount">00</div>
     <div class="intro-line"><i id="introFill"></i></div>
@@ -767,7 +768,7 @@ footer{position:relative;z-index:2;background:var(--void);color:var(--ash);paddi
     <li><a href="#focus" data-scramble>Focus</a></li>
     <li><a href="#stack" data-scramble>Stack</a></li>
   </ul>
-  <div class="nav-mark">Abdallah</div>
+  <div class="nav-mark notranslate" translate="no">Abdallah</div>
   <ul class="nav-r"><li><a href="#contact" data-scramble>Contact</a></li></ul>
 </nav>
 
@@ -780,7 +781,7 @@ footer{position:relative;z-index:2;background:var(--void);color:var(--ash);paddi
   <div class="sweepbar"></div>
 
   <div class="hero-inner" id="heroInner">
-    <h1 id="heroName" class="logo" data-l1="Abdallah" data-l2="Mahmoud"></h1>
+    <h1 id="heroName" class="logo notranslate" translate="no" data-l1="Abdallah" data-l2="Mahmoud"></h1>
     <div class="hero-rule"></div>
     <p class="hero-type"><span id="typeOut"></span><i></i></p>
   </div>
@@ -1244,8 +1245,6 @@ function draw(t){
     g.addColorStop(0,'#16180c');g.addColorStop(1,'#050506');
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H);return;
   }
-  /* فلتر أسود/أبيض على الصورة كلها */
-  ctx.filter='grayscale(1) contrast(1.05) brightness(.88)';
   assemble=Math.min(1,assemble+0.006);
   const ease=0.045+assemble*0.055;
   for(const p of tiles){
@@ -1259,12 +1258,22 @@ function draw(t){
     ctx.save();
     ctx.translate(p.x+p.tw/2,p.y+p.th/2);
     ctx.rotate(p.r*0.35);
-    ctx.drawImage(img,p.sx,p.sy,p.sw,p.sh,-p.tw/2-.6,-p.th/2-.6,p.tw+1.2,p.th+1.2);
+    ctx.drawImage(gsImg||img,p.sx,p.sy,p.sw,p.sh,-p.tw/2-.6,-p.th/2-.6,p.tw+1.2,p.th+1.2);
     ctx.restore();
   }
 }
+/* تحويل الصورة لأبيض وأسود مرة واحدة بس — مش كل فريم */
+let gsImg=null;
+function makeGrayscale(){
+  const off=document.createElement('canvas');
+  off.width=img.naturalWidth; off.height=img.naturalHeight;
+  const octx=off.getContext('2d');
+  octx.filter='grayscale(1) contrast(1.05) brightness(.88)';
+  octx.drawImage(img,0,0);
+  gsImg=off;
+}
 img=new Image();
-img.onload=()=>{imgOK=true;build()};
+img.onload=()=>{imgOK=true;makeGrayscale();build()};
 img.onerror=()=>{imgOK=false};
 img.src='Abdallah.jpg';
 
